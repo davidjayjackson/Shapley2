@@ -16,12 +16,24 @@ Sys.setenv(TZ="America/Denver")
 library(xtable)
 library(ggplot2)
 library("reshape2")
+library(RMySQL)
+library(data.table)
 
 
-Path <- "C:/Users/Howe/Desktop/SPESI/SSN/"
+# Path <- "C:/Users/Howe/Desktop/SPESI/SSN/"
+Path <- "C:/Users/davidjayjackson/Documents/GitHub/"
 setwd(Path)
 WD <- getwd()
-
+# 
+# Load data from Oberver and daily(sun_data) tables
+mydb <- dbConnect(MySQL(),user='root',password='dJj12345',dbname="gn",
+                  host='localhost')
+#
+dbListTables(mydb)
+#
+ROD <- dbGetQuery(mydb, "SELECT * FROM daily
+                  WHERE Year=2018 AND mon=12")
+ROD$Ymd <- as.Date(ROD$Ymd)
 
 ##########################################################
 #####     Functions     ##################################
@@ -154,7 +166,15 @@ path <- paste0(Path,"/Reports/spesi")
 setwd(path)
 (WD <- getwd())
 #(C <- fetch(paste0("20170500RawMinAvgMax"),"txt"))
-(C <- fetch(paste0(Ex,ver,"RawMinAvgMax"),"txt"))
+# (C <- fetch(paste0(Ex,ver,"RawMinAvgMax"),"txt"))
+# C <- dbGetQuery(mydb,"SELECT * FROM minmax
+#                 WHERE year=2018  AND mon=12")
+#Pull data from mimmax table
+C <- dbGetQuery(mydb,"SELECT year,mon,day,count(*) as Count,min(W) as Minimum,avg(W) as Average,max(W) as Maximun 
+                  FROM daily WHERE year=2018 AND mon=12
+                  group by year,mon,day 
+                   ORDER BY year,mon,day")
+
 setwd(Path)
 (WD <- getwd())
 
