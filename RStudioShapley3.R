@@ -30,12 +30,13 @@ WD <- getwd()
 mydb <- dbConnect(MySQL(),user='root',password='dJj12345',dbname="gn",
                   host='localhost')
 # Combine sundata and Obs tables
-A <- dbGetQuery(mydb,"SELECT date,Yr,Mon,Day,whom.Obs,name,k,see,g,s,W
+X <- dbGetQuery(mydb,"SELECT date,Yr,Mon,Day,whom.Obs,name,k,see,g,s,W
               FROM sundata
                 LEFT JOIN whom ON whom.Obs = sundata.obs;")
 #
 dbRemoveTable(mydb,"daily")
-dbWriteTable(mydb, "DAILY", A, row.names = FALSE)
+dbWriteTable(mydb, "DAILY", X, row.names = FALSE)
+
 #
 dbListTables(mydb)
 #
@@ -45,6 +46,7 @@ part <- "Submissions" # by observer
 D <- dbGetQuery(mydb,"SELECT  name,Obs,Yr,Mon,count(*)as Submissions from daily 
                 group by Obs,Yr,Mon 
                 Order by Obs,Yr,Mon ;")
+dbWriteTable(mydb, "obssum", D, row.names = FALSE)
 ##########################################################
 part <- "RawMinAvgMax" # Daily averages: all observers
 ##########################################################
@@ -54,12 +56,12 @@ C <-dbGetQuery(mydb,"SELECT year,mon,day as Day,count(*) as Submissions,min(W)as
                ,avg(W) as Average,max(W) as Maximum
                FROM daily group by year,mon,day 
                ORDER BY year,mon,day;")
-
+dbWriteTable(mydb, "minmax", C, row.names = FALSE)
 
 # X <- dbGetQuery(mydb, "SELECT * FROM daily
 #                   WHERE Year=2018 AND mon=12")
-X <- dbGetQuery(mydb, "SELECT * FROM sundata
-                  ORDER BY Yr,Mon,Day")
+#X <- dbGetQuery(mydb, "SELECT * FROM sundata
+#                  ORDER BY Yr,Mon,Day")
 
 # X$Ymd <- as.Date(X$Ymd)
 
