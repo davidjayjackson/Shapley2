@@ -18,8 +18,9 @@ library(ggplot2)
 library("reshape2")
 library(RMySQL)
 library(data.table)
-
-
+#
+rm(list=ls())
+#
 # Path <- "C:/Users/Howe/Desktop/SPESI/SSN/"
 Path <- "C:/Users/davidjayjackson/Documents/GitHub/"
 setwd(Path)
@@ -28,12 +29,39 @@ WD <- getwd()
 # Load data from Oberver and daily(sun_data) tables
 mydb <- dbConnect(MySQL(),user='root',password='dJj12345',dbname="gn",
                   host='localhost')
+# Combine sundata and Obs tables
+A <- dbGetQuery(mydb,"SELECT date,Yr,Mon,Day,whom.Obs,name,k,see,g,s,W
+              FROM sundata
+                LEFT JOIN whom ON whom.Obs = sundata.obs;")
+#
+dbRemoveTable(mydb,"daily")
+dbWriteTable(mydb, "DAILY", A, row.names = FALSE)
 #
 dbListTables(mydb)
 #
-ROD <- dbGetQuery(mydb, "SELECT * FROM daily
-                  WHERE Year=2018 AND mon=12")
-ROD$Ymd <- as.Date(ROD$Ymd)
+##########################################################
+part <- "Submissions" # by observer
+##########################################################
+D <- dbGetQuery(mydb,"SELECT  name,Obs,Yr,Mon,count(*)as Submissions from daily 
+                group by Obs,Yr,Mon 
+                Order by Obs,Yr,Mon ;")
+##########################################################
+part <- "RawMinAvgMax" # Daily averages: all observers
+##########################################################
+
+#
+C <-dbGetQuery(mydb,"SELECT year,mon,day as Day,count(*) as Submissions,min(W)as Minimum
+               ,avg(W) as Average,max(W) as Maximum
+               FROM daily group by year,mon,day 
+               ORDER BY year,mon,day;")
+
+
+# X <- dbGetQuery(mydb, "SELECT * FROM daily
+#                   WHERE Year=2018 AND mon=12")
+X <- dbGetQuery(mydb, "SELECT * FROM sundata
+                  ORDER BY Yr,Mon,Day")
+
+# X$Ymd <- as.Date(X$Ymd)
 
 ##########################################################
 #####     Functions     ##################################
@@ -76,17 +104,17 @@ if (mo=="0") {
 (Ex <- ifelse(nchar(mo)==1,paste0(yr, "0", mo), paste0(yr,mo)))
 (ver <- "00")
 
-
-path <- paste0(Path, "/Data")
-setwd(path)
-(WD <- getwd())
-(infile <- paste0("Shapley", Ex, ver, ".RData"))
-load(infile)
+# Path statements because sun_data is being loaded from MySQL db
+# path <- paste0(Path, "/Data")
+# setwd(Path)
+# (WD <- getwd())
+# (infile <- paste0("Shapley", Ex, ver, ".RData"))
+# load(infile)
 summary(X)
 nrow(X)
 
-setwd(Path)
-(WD <- getwd())
+# setwd(Path)
+# (WD <- getwd())
 
 H <- X     # hold original data
 # X <- H   # restore if needed
@@ -94,7 +122,7 @@ H <- X     # hold original data
 
 # subset for AAVSO bulletin
 
-X <- H[, c("obs","day","see","w","NumObs","k","ow","name")]
+XX <- H[, c("obs","day","see","w","NumObs","k","ow","name")]
 summary(X)
 nrow(X)
 
@@ -170,11 +198,13 @@ setwd(path)
 # C <- dbGetQuery(mydb,"SELECT * FROM minmax
 #                 WHERE year=2018  AND mon=12")
 #Pull data from mimmax table
+dbRemoveTable(mydb,"minmax")
 C <- dbGetQuery(mydb,"SELECT year,mon,day,count(*) as Count,min(W) as Minimum,avg(W) as Average,max(W) as Maximun 
                   FROM daily WHERE year=2018 AND mon=12
                   group by year,mon,day 
                    ORDER BY year,mon,day")
-
+# Create min/avg/max table
+dbWriteTable(mydb,"minmax",C, row.names=FALSE)
 setwd(Path)
 (WD <- getwd())
 
@@ -276,4 +306,4 @@ WriteCSV(B, loc)
 WriteCSV(B, loc)
 
 
-
+dbDisconnect(db)
